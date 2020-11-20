@@ -1,3 +1,7 @@
+Mysql Database structure:
+
+ CREATE DATABASE loadfundsapp;
+
 CREATE TABLE LoadedFunds (
     Id int NOT NULL,
     Customer_id int NOT NULL,

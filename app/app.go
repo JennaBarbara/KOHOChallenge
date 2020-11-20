@@ -6,6 +6,9 @@ import (
   "net/http"
   "encoding/json"
   "time"
+  "regexp"
+  "strconv"
+  "errors"
 
   "../config"
   "github.com/gorilla/mux"
@@ -17,31 +20,17 @@ type App struct {
 	Router *mux.Router
 	DB     *gorm.DB
 }
+//common errors
+var (
+	ErrBadLoadAmount  = errors.New("Invalid Load Amount")
+)
 
+//database table model
 type LoadedFunds struct {
   Id      uint  `gorm:"primaryKey"`
   Customer_id   uint
   Load_amount    float64
   Time time.Time
-}
-
-// Initialize initializes the app with predefined configuration
-func (a *App) Initialize(config *config.Config) {
-	dbURI := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=%s&parseTime=True",
-		config.DB.Username,
-		config.DB.Password,
-		config.DB.Host,
-		config.DB.Port,
-		config.DB.Name,
-		config.DB.Charset)
-
-	db, err := gorm.Open(config.DB.Dialect, dbURI)
-	if err != nil {
-    log.Fatalf("Could not connect database - %s", err)
-	}
-
-	db.AutoMigrate(&LoadedFunds{})
-  fmt.Printf("here I am! %s\n", db)
 }
 
 //load funds input payload
@@ -57,11 +46,28 @@ type LoadResp struct {
     Customer_id   string `json:"customer_id"`
     Accepted    bool `json:"accepted"`
 }
+// Initialize initializes the app with predefined configuration
+func (a *App) Initialize(config *config.Config) {
+	dbURI := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=%s&parseTime=True",
+		config.DB.Username,
+		config.DB.Password,
+		config.DB.Host,
+		config.DB.Port,
+		config.DB.Name,
+		config.DB.Charset)
+
+	db, err := gorm.Open(config.DB.Dialect, dbURI)
+	if err != nil {
+    log.Fatalf("Could not connect database - %s", err)
+	}
+
+	a.DB = db.AutoMigrate(&LoadedFunds{})
+  a.Router = mux.NewRouter().StrictSlash(true)
+}
 
 func (a *App) HandleRequests() {
-    myRouter := mux.NewRouter().StrictSlash(true)
-    myRouter.HandleFunc("/load", loadFunds).Methods("Post")
-    log.Fatal(http.ListenAndServe(":8080", myRouter))
+    a.Router.HandleFunc("/load", loadFunds).Methods("Post")
+    log.Fatal(http.ListenAndServe(":8080", a.Router))
 }
 
 func loadFunds(w http.ResponseWriter, r *http.Request) {
@@ -73,6 +79,14 @@ func loadFunds(w http.ResponseWriter, r *http.Request) {
     http.Error(w, err.Error(), http.StatusBadRequest)
     return
   }
+
+  amount, err := amountToNumber(req.Load_amount)
+  if err != nil {
+    http.Error(w, err.Error(), http.StatusBadRequest)
+    return
+  }
+  fmt.Printf("x=%v, type of %T\n",amount, amount)
+
   resp := &LoadResp{
     Id: req.Id,
     Customer_id: req.Customer_id,
@@ -84,4 +98,20 @@ func loadFunds(w http.ResponseWriter, r *http.Request) {
 	if err := enc.Encode(resp); err != nil {
 		log.Printf("can't encode %v - %s", resp, err)
 	}
+}
+
+//convert given Load_amount from string to float64 format
+func amountToNumber(amount string) (float64, error){
+	re := regexp.MustCompile(`\$(\d[\d,]*[\.]?[\d{2}]*)`)
+  matches := re.FindStringSubmatch(amount)
+  if matches == nil {
+    return 0.0, ErrBadLoadAmount
+  }
+  match := matches[1]
+  amountFloat, err := strconv.ParseFloat(match, 64);
+  if err != nil {
+    return 0.0, ErrBadLoadAmount
+  }
+  fmt.Printf("x=%v, type of %T\n",amountFloat, amountFloat)
+  return amountFloat, nil
 }
