@@ -16,4 +16,13 @@ Assumptions
 - assuming all the requests are coming from the same time zone
 - assuming all load amounts are using the same currency
 - assuming day is count by calendar date rather than 24h cycle
--assuming week is counted by blahhhhhhhhhh
+- assuming week is counted by calendar week, following the ISO week date system
+
+TODO -
+add mutex to db
+add error handling when id is taken
+move conversion of load request format to separate function/file
+add checks forloadlimiting
+add tests
+
+add checks that

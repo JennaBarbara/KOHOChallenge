@@ -20,9 +20,12 @@ type App struct {
 	Router *mux.Router
 	DB     *gorm.DB
 }
+
 //common errors
 var (
-	ErrBadLoadAmount  = errors.New("Invalid Load Amount")
+	ErrBadLoadAmount  = errors.New("Invalid load_amount")
+  ErrBadId = errors.New("Invalid id")
+  ErrBadCustomerId = errors.New("Invalid customer_id")
 )
 
 // //database table model
@@ -60,7 +63,6 @@ func (a *App) Initialize(config *config.Config) {
 	if err != nil {
     log.Fatalf("Could not connect database - %s", err)
 	}
-
 	a.DB = db.AutoMigrate(&LoadedFunds{})
   a.Router = mux.NewRouter().StrictSlash(true)
 }
@@ -80,6 +82,11 @@ func loadFunds(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
     http.Error(w, err.Error(), http.StatusBadRequest)
     return
   }
+  if loadFunds, err := loadReqToLoadedFunds(req *LoadReq); err != nil {
+    http.Error(w, err.Error(), http.StatusBadRequest)
+    return
+  }
+  
   countToday := CountFundsLoadedToday(db, req)
   fmt.Printf("count=%v, type of %T\n",countToday, countToday)
 
@@ -89,28 +96,7 @@ func loadFunds(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
   sumThisWeek := SumFundsLoadedThisWeek(db, req)
   fmt.Printf("sum=%v, type of %T\n",sumThisWeek, sumThisWeek)
 
-  amount, err := amountToNumber(req.Load_amount)
-  if err != nil {
-    http.Error(w, err.Error(), http.StatusBadRequest)
-    return
-  }
-  id, err := strconv.Atoi(req.Id)
-  if err != nil {
-    http.Error(w, err.Error(), http.StatusBadRequest)
-    return
-  }
-  customerId, err := strconv.Atoi(req.Customer_id)
-  if err != nil {
-    http.Error(w, err.Error(), http.StatusBadRequest)
-    return
-  }
-  fmt.Printf("x=%v, type of %T\n",amount, amount)
-  loadFunds := &LoadedFunds{
-    Id: id,
-    Customer_id: customerId,
-    Load_amount: amount,
-    Time: req.Time,
-  }
+
   InsertLoadedFunds(db, loadFunds)
   resp := &LoadResp{
     Id: req.Id,
@@ -141,10 +127,34 @@ func amountToNumber(amount string) (float64, error){
   return amountFloat, nil
 }
 
+//convert the request format LoadReq to the DB format LoadedFunds
+func loadReqToLoadedFunds(req *LoadReq) (*LoadedFunds, error) {
+  amount, err := amountToNumber(req.Load_amount)
+  if err != nil {
+    return nil, err;
+  }
+  id, err := strconv.Atoi(req.Id)
+  if err != nil {
+    return nil, ErrBadId
+  }
+  customerId, err := strconv.Atoi(req.Customer_id)
+  if err != nil {
+    return nil, ErrBadCustomerId
+  }
+  fmt.Printf("x=%v, type of %T\n",amount, amount)
+  loadFunds := &LoadedFunds{
+    Id: id,
+    Customer_id: customerId,
+    Load_amount: amount,
+    Time: req.Time,
+  }
+  return loadFunds
+}
+
 type Result struct {
   Total float64
 }
-// A maximum of $5,000 can be loaded per day
+
 //get sum of all funds loaded on given day
 func  SumFundsLoadedThisWeek(db *gorm.DB, req *LoadReq) float64 {
   var result Result
@@ -155,7 +165,6 @@ func  SumFundsLoadedThisWeek(db *gorm.DB, req *LoadReq) float64 {
   return result.Total
 }
 
-// A maximum of $20,000 can be loaded per week
 //get sum of all funds loaded in a given week
 func  SumFundsLoadedToday(db *gorm.DB, req *LoadReq) float64 {
   var result Result
@@ -163,7 +172,6 @@ func  SumFundsLoadedToday(db *gorm.DB, req *LoadReq) float64 {
   return result.Total
 }
 
-// A maximum of 3 loads can be performed per day, regardless of amount
 //get count of loads done today
 func  CountFundsLoadedToday(db *gorm.DB, req *LoadReq) int64 {
   var result int64
@@ -171,6 +179,7 @@ func  CountFundsLoadedToday(db *gorm.DB, req *LoadReq) int64 {
   return result
 }
 
+//add a record of a load Funds being performed to the DB
 func InsertLoadedFunds(db *gorm.DB, loadedFunds *LoadedFunds) {
     db.Create(&loadedFunds);
   }
