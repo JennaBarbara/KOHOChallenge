@@ -20,9 +20,5 @@ Assumptions
 
 TODO -
 add mutex to db
-add error handling when id is taken
-move conversion of load request format to separate function/file
-add checks forloadlimiting
+move bd stuff to model folder
 add tests
-
-add checks that
