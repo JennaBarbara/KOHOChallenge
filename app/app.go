@@ -108,6 +108,7 @@ func loadFunds(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
     return
   }
   enc := json.NewEncoder(w)
+  resp.Accepted = true
 	if err := enc.Encode(resp); err != nil {
 		log.Printf("can't encode %v - %s", resp, err)
 	}
