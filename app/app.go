@@ -26,6 +26,9 @@ var (
 	ErrBadLoadAmount  = errors.New("Invalid load_amount")
   ErrBadId = errors.New("Invalid id")
   ErrBadCustomerId = errors.New("Invalid customer_id")
+  ErrExceedsDailyAmountLimit = errors.New("Requested load_amount exceeds daily limit for customer")
+  ErrExceedsWeeklyAmountLimit = errors.New("Requested load_amount exceeds weekly limit for customer")
+  ErrExceedsDailyLoadLimit = errors.New("Request exceeds daily load limit for customer")
 )
 
 // //database table model
@@ -48,6 +51,7 @@ type LoadResp struct {
     Id      string `json:"id"`
     Customer_id   string `json:"customer_id"`
     Accepted    bool `json:"accepted"`
+    Error string `json:"error,omitempty"`
 }
 // Initialize initializes the app with predefined configuration
 func (a *App) Initialize(config *config.Config) {
@@ -82,33 +86,41 @@ func loadFunds(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
     http.Error(w, err.Error(), http.StatusBadRequest)
     return
   }
-  if loadFunds, err := loadReqToLoadedFunds(req *LoadReq); err != nil {
-    http.Error(w, err.Error(), http.StatusBadRequest)
-    return
-  }
-  
-  countToday := CountFundsLoadedToday(db, req)
-  fmt.Printf("count=%v, type of %T\n",countToday, countToday)
-
-  sumToday := SumFundsLoadedToday(db, req)
-  fmt.Printf("sum=%v, type of %T\n",sumToday, sumToday)
-
-  sumThisWeek := SumFundsLoadedThisWeek(db, req)
-  fmt.Printf("sum=%v, type of %T\n",sumThisWeek, sumThisWeek)
-
-
-  InsertLoadedFunds(db, loadFunds)
   resp := &LoadResp{
     Id: req.Id,
     Customer_id: req.Customer_id,
-    Accepted: true,
   }
 
   w.Header().Set("Content-Type", "application/json")
+  loadFund, err := loadReqToLoadedFunds(req)
+  if err != nil {
+    writeBadRequestResponse(w, resp, err)
+    return
+  }
+
+  if err := VelocityLimitsCheck(db, loadFund); err != nil {
+     writeBadRequestResponse(w, resp, err)
+    return
+  }
+
+  if err := InsertLoadedFunds(db, loadFund); err != nil {
+    writeBadRequestResponse(w, resp, err)
+    return
+  }
   enc := json.NewEncoder(w)
 	if err := enc.Encode(resp); err != nil {
 		log.Printf("can't encode %v - %s", resp, err)
 	}
+}
+
+func writeBadRequestResponse(w http.ResponseWriter, resp *LoadResp, err error) {
+  resp.Accepted = false
+  resp.Error = err.Error()
+  w.WriteHeader(http.StatusBadRequest)
+  enc := json.NewEncoder(w)
+  if err := enc.Encode(resp); err != nil {
+    log.Printf("can't encode %v - %s", resp, err)
+  }
 }
 
 //convert given Load_amount from string to float64 format
@@ -129,6 +141,7 @@ func amountToNumber(amount string) (float64, error){
 
 //convert the request format LoadReq to the DB format LoadedFunds
 func loadReqToLoadedFunds(req *LoadReq) (*LoadedFunds, error) {
+//  var loadFunds  &LoadedFunds
   amount, err := amountToNumber(req.Load_amount)
   if err != nil {
     return nil, err;
@@ -148,42 +161,65 @@ func loadReqToLoadedFunds(req *LoadReq) (*LoadedFunds, error) {
     Load_amount: amount,
     Time: req.Time,
   }
-  return loadFunds
+  return loadFunds, nil
 }
 
 type Result struct {
   Total float64
 }
 
+func VelocityLimitsCheck(db *gorm.DB,  loadFund *LoadedFunds) error {
+
+  countToday := CountFundsLoadedToday(db, loadFund)
+  if countToday >= 3 {
+    err := ErrExceedsDailyLoadLimit
+    return err
+  }
+
+  sumToday := SumFundsLoadedToday(db, loadFund) + loadFund.Load_amount
+  if sumToday > 5000.0 {
+    err := ErrExceedsDailyAmountLimit
+    return err
+  }
+
+  sumThisWeek := SumFundsLoadedThisWeek(db, loadFund) + loadFund.Load_amount
+  if sumThisWeek > 20000.0 {
+    err := ErrExceedsWeeklyAmountLimit
+    return err
+  }
+
+  return nil
+}
+
 //get sum of all funds loaded on given day
-func  SumFundsLoadedThisWeek(db *gorm.DB, req *LoadReq) float64 {
+func  SumFundsLoadedThisWeek(db *gorm.DB,  loadedFunds *LoadedFunds) float64 {
   var result Result
-  year,week := req.Time.ISOWeek();
+  year,week := loadedFunds.Time.ISOWeek();
   yearweek := fmt.Sprintf("%04d%02d", year, week)
   fmt.Printf("yearweek - %s\n", yearweek)
-  db.Model(&LoadedFunds{}).Select("sum(Load_amount) as total").Where("Customer_id = ? AND YEARWEEK(Time,3) = ?", req.Customer_id, yearweek).Scan(&result)
+  db.Model(&LoadedFunds{}).Select("sum(Load_amount) as total").Where("Customer_id = ? AND YEARWEEK(Time,3) = ?", loadedFunds.Customer_id, yearweek).Scan(&result)
   return result.Total
 }
 
 //get sum of all funds loaded in a given week
-func  SumFundsLoadedToday(db *gorm.DB, req *LoadReq) float64 {
+func  SumFundsLoadedToday(db *gorm.DB,  loadedFunds *LoadedFunds) float64 {
   var result Result
-  db.Model(&LoadedFunds{}).Select("sum(Load_amount) as total").Where("Customer_id = ? AND DATE(Time) = ?", req.Customer_id, req.Time.Format("2006-01-02")).Scan(&result)
+  db.Model(&LoadedFunds{}).Select("sum(Load_amount) as total").Where("Customer_id = ? AND DATE(Time) = ?", loadedFunds.Customer_id, loadedFunds.Time.Format("2006-01-02")).Scan(&result)
   return result.Total
 }
 
 //get count of loads done today
-func  CountFundsLoadedToday(db *gorm.DB, req *LoadReq) int64 {
+func  CountFundsLoadedToday(db *gorm.DB,  loadedFunds *LoadedFunds) int64 {
   var result int64
-  db.Model(&LoadedFunds{}).Where("Customer_id = ? AND DATE(Time) = ?", req.Customer_id, req.Time.Format("2006-01-02")).Count(&result)
+  db.Model(&LoadedFunds{}).Where("Customer_id = ? AND DATE(Time) = ?", loadedFunds.Customer_id, loadedFunds.Time.Format("2006-01-02")).Count(&result)
   return result
 }
 
 //add a record of a load Funds being performed to the DB
-func InsertLoadedFunds(db *gorm.DB, loadedFunds *LoadedFunds) {
-    db.Create(&loadedFunds);
-  }
-
+func InsertLoadedFunds(db *gorm.DB, loadedFunds *LoadedFunds) error {
+  result := db.Create(&loadedFunds)
+  return result.Error
+}
 type RequestHandlerFunction func(db *gorm.DB, w http.ResponseWriter, r *http.Request)
 
 // Post wraps the router for POST method
