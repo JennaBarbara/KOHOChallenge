@@ -2,12 +2,11 @@ Mysql Database structure:
 
  CREATE DATABASE loadfundsapp;
 
-CREATE TABLE LoadedFunds (
+CREATE TABLE loaded_funds (
     Id int NOT NULL,
     Customer_id int NOT NULL,
     Load_amount DECIMAL(10,2) NOT NULL,
-    Time datetime NOT NULL,
-    PRIMARY KEY (Id)
+    Time datetime NOT NULL
 );
 
 
@@ -20,5 +19,4 @@ Assumptions
 
 TODO -
 add mutex to db
-move bd stuff to model folder
 add tests

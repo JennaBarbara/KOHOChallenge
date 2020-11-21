@@ -2,6 +2,8 @@ package config
 
 type Config struct {
 DB *DBConfig
+InputFile string
+OutputFile string
 }
 
 type DBConfig struct {
@@ -25,5 +27,7 @@ return &Config{
     Name:     "loadfundsapp",
     Charset:  "utf8",
   },
+  InputFile: "input.txt",
+  OutputFile: "output.txt",
 }
 }
