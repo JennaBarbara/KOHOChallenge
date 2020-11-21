@@ -1,11 +1,41 @@
 package model
 //
 import (
+  "fmt"
 	"time"
-  "../app"
+  "regexp"
+  "errors"
+
+  "strconv"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 )
+
+//common errors
+var (
+	ErrBadLoadAmount  = errors.New("Invalid load_amount")
+  ErrBadId = errors.New("Invalid id")
+  ErrBadCustomerId = errors.New("Invalid customer_id")
+  ErrExceedsDailyAmountLimit = errors.New("Requested load_amount exceeds daily limit for customer")
+  ErrExceedsWeeklyAmountLimit = errors.New("Requested load_amount exceeds weekly limit for customer")
+  ErrExceedsDailyLoadLimit = errors.New("Request exceeds daily load limit for customer")
+)
+
+//load funds input payload
+type LoadReq struct {
+    Id      string `json:"id"`
+    Customer_id   string `json:"customer_id"`
+    Load_amount    string `json:"load_amount"`
+    Time time.Time `json:"time"`
+}
+
+//load funds output payload
+type LoadResp struct {
+    Id      string `json:"id"`
+    Customer_id   string `json:"customer_id"`
+    Accepted    bool `json:"accepted"`
+    Error string `json:"error,omitempty"`
+}
 
  //database table model
 type LoadedFunds struct {
@@ -26,8 +56,25 @@ func DBMigrate(db *gorm.DB) *gorm.DB {
 	return db
 }
 
+//convert given Load_amount from string to float64 format
+func amountToNumber(amount string) (float64, error){
+	re := regexp.MustCompile(`\$(\d[\d,]*[\.]?[\d{2}]*)`)
+  matches := re.FindStringSubmatch(amount)
+  if matches == nil {
+    return 0.0, ErrBadLoadAmount
+  }
+  match := matches[1]
+  amountFloat, err := strconv.ParseFloat(match, 64);
+  if err != nil {
+    return 0.0, ErrBadLoadAmount
+  }
+  fmt.Printf("x=%v, type of %T\n",amountFloat, amountFloat)
+  return amountFloat, nil
+}
+
+
 //convert the request format LoadReq to the DB format LoadedFunds
-func loadReqToLoadedFunds(req *app.LoadReq) (*LoadedFunds, error) {
+func LoadReqToLoadedFunds(req *LoadReq) (*LoadedFunds, error) {
   amount, err := amountToNumber(req.Load_amount)
   if err != nil {
     return nil, err;
