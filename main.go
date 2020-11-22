@@ -39,7 +39,7 @@ func main() {
     inputText := scanner.Text()
     req := &model.LoadReq{}
     if err := json.Unmarshal([]byte(inputText), req); err != nil {
-      log.Fatalf("failed to read line %d")
+      log.Fatalf("failed to read line")
     }
     resp := app.LoadFunds(a.DB, req)
     outputText, err := json.Marshal(resp)
