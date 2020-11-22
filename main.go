@@ -41,7 +41,7 @@ func main() {
     if err := json.Unmarshal([]byte(inputText), req); err != nil {
       log.Fatalf("failed to read line")
     }
-    resp := app.LoadFunds(a.DB, req)
+    resp := app.LoadFunds(a, req)
     outputText, err := json.Marshal(resp)
     _, err = fmt.Fprintf(outputWriter, "%s\n", outputText)
     if err != nil {

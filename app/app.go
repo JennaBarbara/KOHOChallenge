@@ -13,6 +13,7 @@ import (
 
 type App struct {
 	DB     *gorm.DB
+  VL  *config.VelocityLimits
 }
 
 //common errors
@@ -37,9 +38,10 @@ func (a *App) Initialize(config *config.Config) {
     log.Fatalf("Could not connect database - %s", err)
 	}
 	a.DB = model.DBMigrate(db)
+  a.VL = config.VL
 }
 
-func LoadFunds(db *gorm.DB, req *model.LoadReq) *model.LoadResp  {
+func LoadFunds(a *App, req *model.LoadReq) *model.LoadResp  {
   resp := &model.LoadResp{
     Id: req.Id,
     Customer_id: req.Customer_id,
@@ -51,12 +53,12 @@ func LoadFunds(db *gorm.DB, req *model.LoadReq) *model.LoadResp  {
     return resp
   }
 
-  if err := velocityLimitsCheck(db, loadFund); err != nil {
+  if err := velocityLimitsCheck(a, loadFund); err != nil {
     writeBadRequestResponse(resp, err)
     return resp
   }
 
-  if err := model.InsertLoadedFund(db, loadFund); err != nil {
+  if err := model.InsertLoadedFund(a.DB, loadFund); err != nil {
     writeBadRequestResponse(resp, err)
     return resp
   }
@@ -71,21 +73,21 @@ func writeBadRequestResponse(resp *model.LoadResp, err error) {
 }
 
 //perform velocity checks described in the requirements
-func velocityLimitsCheck(db *gorm.DB,  loadFund *model.LoadedFunds) error {
-  countToday := model.CountFundsLoadedToday(db, loadFund)
-  if countToday >= 3 {
+func velocityLimitsCheck(a *App,  loadFund *model.LoadedFunds) error {
+  countToday := model.CountFundsLoadedToday(a.DB, loadFund)
+  if countToday >= a.VL.DailyLoadLimit {
     err := ErrExceedsDailyLoadLimit
     return err
   }
 
-  sumToday := model.SumFundsLoadedToday(db, loadFund) + loadFund.Load_amount
-  if sumToday > 5000.0 {
+  sumToday := model.SumFundsLoadedToday(a.DB, loadFund) + loadFund.Load_amount
+  if sumToday > a.VL.DailyAmountLimit {
     err := ErrExceedsDailyAmountLimit
     return err
   }
 
-  sumThisWeek := model.SumFundsLoadedThisWeek(db, loadFund) + loadFund.Load_amount
-  if sumThisWeek > 20000.0 {
+  sumThisWeek := model.SumFundsLoadedThisWeek(a.DB, loadFund) + loadFund.Load_amount
+  if sumThisWeek > a.VL.WeeklyAmountLimit {
     err := ErrExceedsWeeklyAmountLimit
     return err
   }
