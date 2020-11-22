@@ -47,7 +47,7 @@ func LoadFunds(db *gorm.DB, req *model.LoadReq) *model.LoadResp  {
     return resp
   }
 
-  if err := model.InsertLoadedFunds(db, loadFund); err != nil {
+  if err := model.InsertLoadedFund(db, loadFund); err != nil {
     writeBadRequestResponse(resp, err)
     return resp
   }
