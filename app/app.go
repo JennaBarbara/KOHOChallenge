@@ -43,7 +43,7 @@ func LoadFunds(db *gorm.DB, req *model.LoadReq) *model.LoadResp  {
   }
 
   if err := model.VelocityLimitsCheck(db, loadFund); err != nil {
-     writeBadRequestResponse(resp, err)
+    writeBadRequestResponse(resp, err)
     return resp
   }
 

@@ -15,15 +15,14 @@ import (
 func main() {
   //get the program configuration
   config := config.GetConfig()
+  a := &app.App{}
+  a.Initialize(config)
 
   //open the input file
   inputFile, err := os.Open(config.InputFile)
   if err != nil {
         log.Fatalf("failed to open input file")
     }
-
-  a := &app.App{}
-  a.Initialize(config)
 
   //create the output file
   outputFile,err := os.Create(config.OutputFile)
@@ -34,6 +33,8 @@ func main() {
 
   scanner := bufio.NewScanner(inputFile)
   scanner.Split(bufio.ScanLines)
+
+  //read ionput file line by line and print results
   for scanner.Scan() {
     inputText := scanner.Text()
     req := &model.LoadReq{}
@@ -47,6 +48,8 @@ func main() {
       log.Fatalf("failed to write to output file")
     }
   }
+
+  //clear memory
   outputWriter.Flush();
   inputFile.Close()
   outputFile.Close()
