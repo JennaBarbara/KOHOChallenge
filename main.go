@@ -8,14 +8,14 @@ import (
   "encoding/json"
 
   "./config"
-  "./app"
+  "./loadFundsApp"
   "./model"
 )
 
 func main() {
   //get the program configuration
   config := config.GetConfig()
-  a := &app.App{}
+  a := &loadFundsApp.LoadFundsApp{}
   a.Initialize(config)
 
   //open the input file
@@ -41,7 +41,7 @@ func main() {
     if err := json.Unmarshal([]byte(inputText), req); err != nil {
       log.Fatalf("failed to read line")
     }
-    resp := app.LoadFunds(a, req)
+    resp := loadFundsApp.LoadFunds(a, req)
     outputText, err := json.Marshal(resp)
     _, err = fmt.Fprintf(outputWriter, "%s\n", outputText)
     if err != nil {

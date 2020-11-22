@@ -1,4 +1,4 @@
-package app
+package loadFundsApp
 
 import (
   "fmt"
@@ -11,7 +11,7 @@ import (
 )
 
 
-type App struct {
+type LoadFundsApp struct {
 	DB     *gorm.DB
   VL  *config.VelocityLimits
 }
@@ -24,7 +24,7 @@ var (
 )
 
 // Initialize initializes the app with predefined configuration
-func (a *App) Initialize(config *config.Config) {
+func (a *LoadFundsApp) Initialize(config *config.Config) {
 	dbURI := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=%s&parseTime=True",
 		config.DB.Username,
 		config.DB.Password,
@@ -41,7 +41,7 @@ func (a *App) Initialize(config *config.Config) {
   a.VL = config.VL
 }
 
-func LoadFunds(a *App, req *model.LoadReq) *model.LoadResp  {
+func LoadFunds(a *LoadFundsApp, req *model.LoadReq) *model.LoadResp  {
   resp := &model.LoadResp{
     Id: req.Id,
     Customer_id: req.Customer_id,
@@ -73,7 +73,7 @@ func writeBadRequestResponse(resp *model.LoadResp, err error) {
 }
 
 //perform velocity checks described in the requirements
-func velocityLimitsCheck(a *App,  loadFund *model.LoadedFunds) error {
+func velocityLimitsCheck(a *LoadFundsApp,  loadFund *model.LoadedFunds) error {
   countToday := model.CountFundsLoadedToday(a.DB, loadFund)
   if countToday >= a.VL.DailyLoadLimit {
     err := ErrExceedsDailyLoadLimit
