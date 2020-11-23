@@ -3,8 +3,6 @@
 
 This project is written in go version 1.15.5. It connects to a MySql database using gorm.
 
-It is designed to
-
 ## Before You Start
 
 As this program requires a MySQL database, you will need a MySql table with the following structure in a MySql Database running locally to run the program:
