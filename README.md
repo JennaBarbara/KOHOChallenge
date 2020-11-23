@@ -1,7 +1,7 @@
 
 ## About
 
-This project is written in go version 1.15.5. It connects to a MySql database using gorm.
+This project is written in go version 1.15.5. It connects to a MySql database using the Gorm ORM library.
 
 ## Before You Start
 
