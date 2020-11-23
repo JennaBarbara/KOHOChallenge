@@ -78,6 +78,7 @@ func LoadFunds(a *LoadFundsApp, req *model.LoadReq) *model.LoadResp  {
   return resp
 }
 
+//log when a bad request has been performed
 func writeBadRequestResponse(resp *model.LoadResp, err error) {
   resp.Accepted = false
   log.Printf("Request ID: %s - Error: %s ", resp.Id, err.Error())
