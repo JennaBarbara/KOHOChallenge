@@ -45,3 +45,4 @@ The following assumptions were made when designing this program:
 - assuming day is count by calendar date rather than 24h cycle
 - assuming week is counted by calendar week starting with Monday
 - assuming that load requests with same Id and Customer_id as a previous request should be ignored, even if that request was not accepted
+- assuming load requests should be maintained between uses of the program (hence the db)
