@@ -44,4 +44,4 @@ The following assumptions were made when designing this program:
 - assuming all load amounts are using the same currency
 - assuming day is count by calendar date rather than 24h cycle
 - assuming week is counted by calendar week starting with Monday
-- assuming all load requests are unique
+- assuming that load requests with same Id and Customer_id as a previous request should be ignored, even if that request was not accepted
