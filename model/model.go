@@ -1,8 +1,8 @@
 package model
-//
+
 import (
   "fmt"
-	"time"
+  "time"
   "regexp"
   "errors"
 
@@ -47,7 +47,7 @@ type Result struct {
   Total float64
 }
 
-// DBMigrate will create and migrate the tables, and then make the some relationships if necessary
+// link db object to the LoadedFunds struct
 func DBMigrate(db *gorm.DB) *gorm.DB {
 	db.AutoMigrate(&LoadedFunds{})
 	return db
@@ -67,7 +67,6 @@ func amountToNumber(amount string) (float64, error){
   }
   return amountFloat, nil
 }
-
 
 //convert the request format LoadReq to the DB format LoadedFunds
 func LoadReqToLoadedFunds(req *LoadReq) (*LoadedFunds, error) {
