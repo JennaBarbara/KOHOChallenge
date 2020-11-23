@@ -14,7 +14,8 @@ CREATE TABLE loaded_funds (
     Id int NOT NULL,
     Customer_id int NOT NULL,
     Load_amount DECIMAL(10,2) NOT NULL,
-    Time datetime NOT NULL
+    Time datetime NOT NULL,
+    Accepted BOOLEAN NOT NULL
 );
 ```
 

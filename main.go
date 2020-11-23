@@ -42,10 +42,12 @@ func main() {
       log.Fatalf("failed to read line")
     }
     resp := loadFundsApp.LoadFunds(a, req)
-    outputText, err := json.Marshal(resp)
-    _, err = fmt.Fprintf(outputWriter, "%s\n", outputText)
-    if err != nil {
-      log.Fatalf("failed to write to output file")
+    if resp != nil {
+      outputText, err := json.Marshal(resp)
+      _, err = fmt.Fprintf(outputWriter, "%s\n", outputText)
+      if err != nil {
+        log.Fatalf("failed to write to output file")
+      }
     }
   }
 

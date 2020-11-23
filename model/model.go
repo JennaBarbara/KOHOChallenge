@@ -39,6 +39,7 @@ type LoadedFunds struct {
   Customer_id   int
   Load_amount    float64
   Time time.Time
+  Accepted bool
 }
 
 //result structure for Database queries that retrieve sums of currency
@@ -87,6 +88,7 @@ func LoadReqToLoadedFunds(req *LoadReq) (*LoadedFunds, error) {
     Customer_id: customerId,
     Load_amount: amount,
     Time: req.Time,
+    Accepted: false,
   }
   return loadFunds, nil
 }
@@ -96,22 +98,31 @@ func  SumFundsLoadedThisWeek(db *gorm.DB,  loadedFunds *LoadedFunds) float64 {
   var result Result
   year,week := loadedFunds.Time.ISOWeek();
   yearweek := fmt.Sprintf("%04d%02d", year, week)
-  db.Model(&LoadedFunds{}).Select("sum(Load_amount) as total").Where("Customer_id = ? AND YEARWEEK(Time,3) = ?", loadedFunds.Customer_id, yearweek).Scan(&result)
+  db.Model(&LoadedFunds{}).Select("sum(Load_amount) as total").Where("Customer_id = ? AND YEARWEEK(Time,3) = ? AND Accepted = true", loadedFunds.Customer_id, yearweek).Scan(&result)
   return result.Total
 }
 
 //get sum of all funds loaded in a given week
 func  SumFundsLoadedToday(db *gorm.DB,  loadedFunds *LoadedFunds) float64 {
   var result Result
-  db.Model(&LoadedFunds{}).Select("sum(Load_amount) as total").Where("Customer_id = ? AND DATE(Time) = ?", loadedFunds.Customer_id, loadedFunds.Time.Format("2006-01-02")).Scan(&result)
+  db.Model(&LoadedFunds{}).Select("sum(Load_amount) as total").Where("Customer_id = ? AND DATE(Time) = ? AND Accepted = true", loadedFunds.Customer_id, loadedFunds.Time.Format("2006-01-02")).Scan(&result)
   return result.Total
 }
 
 //get count of loads done today
 func  CountFundsLoadedToday(db *gorm.DB,  loadedFunds *LoadedFunds) int64 {
   var result int64
-  db.Model(&LoadedFunds{}).Where("Customer_id = ? AND DATE(Time) = ?", loadedFunds.Customer_id, loadedFunds.Time.Format("2006-01-02")).Count(&result)
+  db.Model(&LoadedFunds{}).Where("Customer_id = ? AND DATE(Time) = ? AND Accepted = true", loadedFunds.Customer_id, loadedFunds.Time.Format("2006-01-02")).Count(&result)
   return result
+}
+
+//check if a record with a given Id and Customer_id has already been recorded
+func  GetExistingRecord(db *gorm.DB,  loadedFunds *LoadedFunds) bool {
+  result := &LoadedFunds{}
+  if db.Where("Id = ? AND Customer_id = ? ", loadedFunds.Id, loadedFunds.Customer_id).First(&result).RecordNotFound() {
+    return false
+  }
+  return true
 }
 
 //add a record of a load Funds being performed to the DB
@@ -120,6 +131,7 @@ func InsertLoadedFund(db *gorm.DB, loadedFunds *LoadedFunds) error {
   return result.Error
 }
 
+//Delete an existing load funds record
 func DeleteLoadedFund(db *gorm.DB, loadedFunds *LoadedFunds) error {
   result := db.Where("Id = ? AND Customer_id = ? AND Load_amount = ? AND Time = ?", loadedFunds.Id, loadedFunds.Customer_id, loadedFunds.Load_amount, loadedFunds.Time).Delete(&LoadedFunds{})
   return result.Error

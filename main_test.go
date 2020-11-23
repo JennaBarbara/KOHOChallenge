@@ -20,8 +20,9 @@ func TestAll(t *testing.T){
 
   //perform Tests
   testSuccessfulLoad(t, a)
+  testDuplicateRequest(t, a)
   testDailyAmountLimitValidation(t, a)
-  testWeeklyAmountLimitValidation(t, a)
+   testWeeklyAmountLimitValidation(t, a)
 
 
 }
@@ -37,7 +38,19 @@ func testSuccessfulLoad(t *testing.T, a *loadFundsApp.LoadFundsApp){
   if !reflect.DeepEqual(expectedResp, actualResp) {
     	t.Fatalf("testSuccessfulLoad failed!")
   }
+}
 
+func testDuplicateRequest(t *testing.T, a *loadFundsApp.LoadFundsApp){
+  reqTime, _ := time.Parse(time.RFC3339, "2020-01-03T00:00:00Z")
+  req := &model.LoadReq{ Id: "1", Customer_id: "1", Load_amount: "$100.00", Time: reqTime}
+  loadFundsApp.LoadFunds(a, req)
+  actualResp := loadFundsApp.LoadFunds(a, req)
+
+  loadedFunds, _ := model.LoadReqToLoadedFunds(req)
+  model.DeleteLoadedFund(a.DB, loadedFunds)
+  if  actualResp != nil {
+    	t.Fatalf("testDuplicateRequest failed!")
+  }
 }
 
 func testDailyAmountLimitValidation(t *testing.T, a *loadFundsApp.LoadFundsApp){
@@ -87,7 +100,7 @@ func testWeeklyAmountLimitValidation(t *testing.T, a *loadFundsApp.LoadFundsApp)
   model.DeleteLoadedFund(a.DB, loadedFunds5);
 
   if !reflect.DeepEqual(expectedResp, actualResp) {
-      t.Fatalf("testDailyAmountLimitValidation failed!")
+      t.Fatalf("testWeeklyAmountLimitValidation failed!")
   }
 
 }

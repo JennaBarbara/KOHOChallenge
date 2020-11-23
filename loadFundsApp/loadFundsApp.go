@@ -12,7 +12,7 @@ import (
 
 
 type LoadFundsApp struct {
-	DB     *gorm.DB
+	DB  *gorm.DB
   VL  *config.VelocityLimits
 }
 
@@ -21,6 +21,7 @@ var (
   ErrExceedsDailyAmountLimit = errors.New("Requested load_amount exceeds daily limit for customer")
   ErrExceedsWeeklyAmountLimit = errors.New("Requested load_amount exceeds weekly limit for customer")
   ErrExceedsDailyLoadLimit = errors.New("Request exceeds daily load limit for customer")
+  ErrRecordAlreadyExists = errors.New("Request with matching Id and Customer_id has already been performed")
 )
 
 // Initialize initializes the app with predefined configuration
@@ -53,11 +54,21 @@ func LoadFunds(a *LoadFundsApp, req *model.LoadReq) *model.LoadResp  {
     return resp
   }
 
+  if err := existingRecordCheck(a, loadFund); err != nil {
+    writeBadRequestResponse( resp, err)
+    return nil
+  }
+
   if err := velocityLimitsCheck(a, loadFund); err != nil {
     writeBadRequestResponse(resp, err)
+    if err := model.InsertLoadedFund(a.DB, loadFund); err != nil {
+      writeBadRequestResponse(resp, err)
+      return resp
+    }
     return resp
   }
 
+  loadFund.Accepted = true
   if err := model.InsertLoadedFund(a.DB, loadFund); err != nil {
     writeBadRequestResponse(resp, err)
     return resp
@@ -70,6 +81,14 @@ func LoadFunds(a *LoadFundsApp, req *model.LoadReq) *model.LoadResp  {
 func writeBadRequestResponse(resp *model.LoadResp, err error) {
   resp.Accepted = false
   log.Printf("Request ID: %s - Error: %s ", resp.Id, err.Error())
+}
+
+//check if a record already  in the DB
+func existingRecordCheck(a *LoadFundsApp,  loadFund *model.LoadedFunds) error {
+  if model.GetExistingRecord(a.DB, loadFund) {
+    return ErrRecordAlreadyExists
+  }
+  return nil
 }
 
 //perform velocity checks described in the requirements
