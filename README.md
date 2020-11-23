@@ -1,11 +1,11 @@
 
-##About
+## About
 
 This project is written in go version 1.15.5. It connects to a MySql database using gorm.
 
 It is designed to
 
-##Before You Start
+## Before You Start
 
 As this program requires a MySQL database, you will need a MySql table with the following structure in a MySql Database running locally to run the program:
 
@@ -23,7 +23,7 @@ Please specify the details of your local MySql database (such as port, name, use
 
 You can also specify the intended input and output files for your program in config/config.go.
 
-##Running the Program
+## Running the Program
 
 Running the unit tests
 ```
@@ -36,7 +36,7 @@ Running the program
 go run main.go
 ```
 
-##Assumptions
+## Assumptions
 
 The following assumptions were made when designing this program:
 - going off given times for rate limits
