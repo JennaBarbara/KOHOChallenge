@@ -36,10 +36,10 @@ go run main.go
 ## Assumptions
 
 The following assumptions were made when designing this program:
-- going off given times for rate limits
-- assuming all the requests are coming from the same time zone
-- assuming all load amounts are using the same currency
-- assuming day is count by calendar date rather than 24h cycle
-- assuming week is counted by calendar week starting with Monday
-- assuming that load requests with same Id and Customer_id as a previous request should be ignored, even if that request was not accepted
-- assuming load requests should be maintained between uses of the program (hence the db)
+- Load requests should be maintained between uses of the program, hence the use of a database
+- It is appropriate to go off the times given in the input for velocity rate limits
+- All the inputs are coming from the same time zone
+- All load amounts are using the same currency
+- Daily velocity limits are counted by calendar date rather than 24h cycle
+- Weekly velocity limits are counted by calendar week, with each week starting with Monday, rather than 7 day cycle
+- Load requests with the same Id and Customer_id as a previous request should be ignored, even if that request was not accepted
