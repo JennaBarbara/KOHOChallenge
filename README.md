@@ -25,13 +25,12 @@ You can also specify the intended input and output files for your program in con
 
 ## Running the Program
 
-Running the unit tests
+Running the unit tests:
 ```
 go tests
 ```
 
-Running the program
-
+Running the program:
 ```
 go run main.go
 ```
